@@ -31,7 +31,7 @@ RUN VERSION=$(echo ${REDIS_VERSION} | sed -e "s/^v//g"); \
     make -C redis-${VERSION} all; \
     make -C redis-${VERSION} install
 
-FROM ubuntu:22.04-slim
+FROM ubuntu:jammy-20250126
 
 LABEL maintainer="FalkorDB"
 
