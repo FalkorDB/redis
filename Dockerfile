@@ -1,7 +1,7 @@
 FROM falkordb/falkordb:latest AS module
-FROM alpine:3.19 as builder
+FROM ubuntu:22.04-slim as builder
 
-LABEL maintainer="Opstree Solutions"
+LABEL maintainer="FalkorDB"
 
 ARG TARGETARCH
 
@@ -11,7 +11,17 @@ LABEL version=1.0 \
 
 ARG REDIS_VERSION="stable"
 
-RUN apk add --no-cache su-exec tzdata make curl build-base linux-headers bash openssl-dev
+RUN apt-get update && apt-get install -y \
+    sudo \
+    tzdata \
+    make \
+    curl \
+    build-essential \
+    linux-headers-generic \
+    bash \
+    libssl-dev \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
 
@@ -34,7 +44,7 @@ RUN VERSION=$(echo ${REDIS_VERSION} | sed -e "s/^v//g"); \
 
 FROM alpine:3.19
 
-LABEL maintainer="Opstree Solutions"
+LABEL maintainer="FalkorDB"
 
 ARG TARGETARCH
 
@@ -42,7 +52,7 @@ ENV REDIS_PORT=6379
 
 LABEL version=1.0 \
       arch=$TARGETARCH \
-      description="A production grade performance tuned redis docker image created by Opstree Solutions"
+      description="A production grade performance tuned redis docker image created by FalkorDB"
 
 COPY --from=builder /usr/local/bin/redis-server /usr/local/bin/redis-server
 COPY --from=builder /usr/local/bin/redis-cli /usr/local/bin/redis-cli
