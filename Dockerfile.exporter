@@ -2,9 +2,9 @@ FROM alpine:3.19 as builder
 
 ARG TARGETARCH
 
-ARG EXPORTER_URL="https://github.com/oliver006/redis_exporter/releases/download"
+ARG EXPORTER_URL="https://github.com/FalkorDB/redis_exporter/releases/download"
 
-ARG REDIS_EXPORTER_VERSION="v1.48.0"
+ARG REDIS_EXPORTER_VERSION="v1.68.0"
 
 WORKDIR /tmp
 
@@ -22,7 +22,7 @@ LABEL maintainer="Opstree Solutions"
 
 LABEL vesrion=1.0 \
       arch=$TARGETARCH \
-      description="A production grade redis exporter docker image created by Opstree Solutions"
+      description="A production grade redis exporter docker image created by FalkorDB"
 
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 COPY --from=builder /tmp/redis_exporter/redis_exporter /usr/local/bin/redis_exporter
