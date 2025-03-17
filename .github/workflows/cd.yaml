@@ -2,7 +2,8 @@ name: Docker Image CD
 
 on:
   push:
-    branches: [master]
+    branches: [main]
+  workflow_dispatch:
 
 env:
   REDIS_VERSION: latest
@@ -26,8 +27,8 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: quay.io
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build and push multi-arch latest image
         uses: docker/build-push-action@v2
         with:
@@ -37,7 +38,7 @@ jobs:
           push: true
           build-args: |
             REDIS_VERSION=${{ matrix.version }}
-          tags: quay.io/opstree/redis:${{ matrix.version }}
+          tags: falkordb/redis:${{ matrix.version }}
 
   build_redis_sentinel:
     strategy:
@@ -55,8 +56,8 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: quay.io
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build and push multi-arch latest image
         uses: docker/build-push-action@v2
         with:
@@ -66,7 +67,7 @@ jobs:
           push: true
           build-args: |
             REDIS_SENTINEL_VERSION=${{ matrix.version }}
-          tags: quay.io/opstree/redis-sentinel:${{ matrix.version }}
+          tags: falkordb/redis-sentinel:${{ matrix.version }}
 
   build_redis_exporter:
     strategy:
@@ -84,8 +85,8 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: quay.io
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build and push multi-arch latest image
         uses: docker/build-push-action@v2
         with:
@@ -95,4 +96,4 @@ jobs:
           push: true
           build-args: |
             REDIS_EXPORTER_VERSION=${{ matrix.version }}
-          tags: quay.io/opstree/redis-exporter:${{ matrix.version }}
+          tags: falkordb/redis-exporter:${{ matrix.version }}
