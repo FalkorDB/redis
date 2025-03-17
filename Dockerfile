@@ -11,16 +11,15 @@ LABEL version=1.0 \
 
 ARG REDIS_VERSION="stable"
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    su-exec \
     tzdata \
     make \
     curl \
     build-essential \
-    linux-headers-generic \
     bash \
     libssl-dev \
     pkg-config \
     tcl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
