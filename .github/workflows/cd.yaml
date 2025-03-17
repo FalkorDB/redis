@@ -23,10 +23,10 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      - name: Login to Quay
+      - name: Login to Dockerhub
         uses: docker/login-action@v2
         with:
-          registry: quay.io
+          registry: docker.io
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build and push multi-arch latest image
@@ -52,10 +52,10 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      - name: Login to Quay
+      - name: Login to Dockerhub
         uses: docker/login-action@v2
         with:
-          registry: quay.io
+          registry: docker.io
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build and push multi-arch latest image
@@ -72,7 +72,7 @@ jobs:
   build_redis_exporter:
     strategy:
       matrix:
-        version: [v1.48.0]
+        version: [v1.68.0]
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -81,10 +81,10 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      - name: Login to Quay
+      - name: Login to Dockerhub
         uses: docker/login-action@v2
         with:
-          registry: quay.io
+          registry: docker.io
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build and push multi-arch latest image
