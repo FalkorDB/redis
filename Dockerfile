@@ -1,3 +1,4 @@
+FROM falkordb/falkordb:latest AS module
 FROM alpine:3.19 as builder
 
 LABEL maintainer="Opstree Solutions"
@@ -45,7 +46,7 @@ LABEL version=1.0 \
 
 COPY --from=builder /usr/local/bin/redis-server /usr/local/bin/redis-server
 COPY --from=builder /usr/local/bin/redis-cli /usr/local/bin/redis-cli
-
+COPY --from=module /FalkorDB /FalkorDB
 RUN apk update && apk upgrade
 
 RUN addgroup -S -g 1000 redis && adduser -S -G redis -u 1000 redis && \
