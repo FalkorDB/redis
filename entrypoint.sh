@@ -40,8 +40,12 @@ redis_mode_setup() {
             echo cluster-migration-barrier 1
             echo cluster-config-file "${NODE_CONF_DIR}/nodes.conf"
         } >> /etc/redis/redis.conf
-
-        POD_HOSTNAME=$(hostname)
+        if [[ -n $POD_HOSTNAME ]];then
+            POD_HOSTNAME=$HOSTNAME.$POD_HOSTNAME
+        else
+            POD_HOSTNAME=$(hostname)
+        fi
+        
         POD_IP=$(hostname -i)
         sed -i -e "/myself/ s/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/${POD_IP}/" "${NODE_CONF_DIR}/nodes.conf"
     else
