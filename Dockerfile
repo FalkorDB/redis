@@ -1,5 +1,5 @@
 FROM falkordb/falkordb:latest AS module
-FROM alpine:3.19 as builder
+FROM ubuntu:jammy-20250126 as builder
 
 LABEL maintainer="FalkorDB"
 
@@ -10,7 +10,18 @@ LABEL version=1.0 \
       description="A production grade performance tuned redis docker image created by Opstree Solutions"
 
 ARG REDIS_VERSION="stable"
-RUN apk add --no-cache su-exec tzdata make curl build-base linux-headers bash openssl-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    su-exec \
+    tzdata \
+    make \
+    curl \
+    build-essential \
+    linux-headers-generic \
+    bash \
+    libssl-dev \
+    pkg-config \
+    tcl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
 
