@@ -63,7 +63,7 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     libc6 \
     libstdc++6 \
-    ca-certifiactes \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r -g 1000 redis && useradd -r -g redis -u 1000 redis
