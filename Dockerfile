@@ -1,5 +1,5 @@
 FROM falkordb/falkordb:latest AS module
-FROM ubuntu:22.04-slim as builder
+FROM alpine:3.19 as builder
 
 LABEL maintainer="FalkorDB"
 
@@ -10,18 +10,7 @@ LABEL version=1.0 \
       description="A production grade performance tuned redis docker image created by Opstree Solutions"
 
 ARG REDIS_VERSION="stable"
-
-RUN apt-get update && apt-get install -y \
-    sudo \
-    tzdata \
-    make \
-    curl \
-    build-essential \
-    linux-headers-generic \
-    bash \
-    libssl-dev \
-    libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache su-exec tzdata make curl build-base linux-headers bash openssl-dev
 
 WORKDIR /tmp
 
@@ -42,7 +31,7 @@ RUN VERSION=$(echo ${REDIS_VERSION} | sed -e "s/^v//g"); \
     make -C redis-${VERSION} all; \
     make -C redis-${VERSION} install
 
-FROM alpine:3.19
+FROM ubuntu:22.04-slim
 
 LABEL maintainer="FalkorDB"
 
@@ -57,7 +46,11 @@ LABEL version=1.0 \
 COPY --from=builder /usr/local/bin/redis-server /usr/local/bin/redis-server
 COPY --from=builder /usr/local/bin/redis-cli /usr/local/bin/redis-cli
 COPY --from=module /FalkorDB /FalkorDB
-RUN apk update && apk upgrade
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    libc6 \
+    libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN addgroup -S -g 1000 redis && adduser -S -G redis -u 1000 redis && \
     apk add --no-cache bash
