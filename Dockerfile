@@ -10,6 +10,7 @@ LABEL version=1.0 \
       description="A production grade performance tuned redis docker image created by Opstree Solutions"
 
 ARG REDIS_VERSION="stable"
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
     make \
@@ -20,6 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     tcl \
     ca-certificates \
+    && ln -fs /usr/share/zoneinfo/UTC /etc/localtime \
+    && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
