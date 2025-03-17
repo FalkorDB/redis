@@ -52,7 +52,7 @@ RUN apt-get update && apt-get install -y \
     libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup -S -g 1000 redis && adduser -S -G redis -u 1000 redis
+RUN groupadd -r -g 1000 redis && useradd -r -g redis -u 1000 redis
 
 COPY redis.conf /etc/redis/redis.conf
 
