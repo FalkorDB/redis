@@ -45,7 +45,13 @@ redis_mode_setup() {
         else
             POD_HOSTNAME=$(hostname)
         fi
-        
+        if [[ "$SETUP_MODE" == "replication" ]];then
+            {
+                echo replica-announce-ip "${POD_HOSTNAME}"
+                echo replica-announce-port "${REDIS_PORT}"
+
+            } >> /etc/redis/redis.conf
+        fi
         POD_IP=$(hostname -i)
         sed -i -e "/myself/ s/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/${POD_IP}/" "${NODE_CONF_DIR}/nodes.conf"
     else
