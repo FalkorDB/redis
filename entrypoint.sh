@@ -8,6 +8,11 @@ NODE_CONF_DIR=${NODE_CONF_DIR:-"/node-conf"}
 EXTERNAL_CONFIG_FILE=${EXTERNAL_CONFIG_FILE:-"/etc/redis/external.conf.d/redis-additional.conf"}
 REDIS_MAJOR_VERSION=${REDIS_MAJOR_VERSION:-"v7"}
 
+if [[ -n $POD_HOSTNAME ]];then
+    POD_HOSTNAME=$HOSTNAME.$POD_HOSTNAME
+else
+    POD_HOSTNAME=$(hostname)
+fi
 apply_permissions() {
     chgrp -R 1000 /etc/redis
     chmod -R g=u /etc/redis
@@ -40,22 +45,19 @@ redis_mode_setup() {
             echo cluster-migration-barrier 1
             echo cluster-config-file "${NODE_CONF_DIR}/nodes.conf"
         } >> /etc/redis/redis.conf
-        if [[ -n $POD_HOSTNAME ]];then
-            POD_HOSTNAME=$HOSTNAME.$POD_HOSTNAME
-        else
-            POD_HOSTNAME=$(hostname)
-        fi
+        POD_IP=$(hostname -i)
+        sed -i -e "/myself/ s/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/${POD_IP}/" "${NODE_CONF_DIR}/nodes.conf"
+    else
         if [[ "$SETUP_MODE" == "replication" ]];then
+            echo "setting up falkordb in replication mode"
             {
                 echo replica-announce-ip "${POD_HOSTNAME}"
                 echo replica-announce-port "${REDIS_PORT}"
 
             } >> /etc/redis/redis.conf
+        else
+            echo "Setting up redis in standalone mode"
         fi
-        POD_IP=$(hostname -i)
-        sed -i -e "/myself/ s/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/${POD_IP}/" "${NODE_CONF_DIR}/nodes.conf"
-    else
-        echo "Setting up redis in standalone mode"
     fi
 }
 

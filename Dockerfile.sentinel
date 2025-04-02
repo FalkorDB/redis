@@ -8,7 +8,7 @@ LABEL version=1.0 \
 
 ARG REDIS_SENTINEL_VERSION="stable"
 
-RUN apk add --no-cache su-exec tzdata make curl build-base linux-headers bash openssl-dev
+RUN apk add --no-cache su-exec tzdata make curl build-base linux-headers bash openssl-dev ca-certificates
 
 WORKDIR /tmp
 
