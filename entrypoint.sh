@@ -94,7 +94,7 @@ tls_setup() {
 acl_setup(){
     if [[ "$ACL_MODE" == "true" ]]; then
         {
-            echo aclfile /etc/redis/user.acl
+            echo aclfile /etc/redis/acl/user.acl
             } >> /etc/redis/redis.conf
 
     else
