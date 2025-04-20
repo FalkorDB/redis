@@ -74,8 +74,14 @@ tls_setup() {
 
 acl_setup(){
     if [[ "$ACL_MODE" == "true" ]]; then
+        if [[ -f "/data/user.acl" && -s "/data/user.acl" ]]; then
+            echo "Using existing ACL file"
+        else
+            echo "Creating new ACL file"
+            cat /etc/redis/user.acl > /data/user.acl
+        fi
         {
-            echo aclfile /etc/redis/user.acl
+            echo aclfile /data/user.acl
             } >> /etc/redis/sentinel.conf
 
     else
