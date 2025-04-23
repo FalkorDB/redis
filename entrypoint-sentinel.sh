@@ -76,8 +76,8 @@ tls_setup() {
 acl_setup(){
     if [[ "$ACL_MODE" == "true" ]]; then
             echo "Sentinel is running with ACL mode"
-            if [[ ! -f "/etc/redis/user.acl" ]]; then
-                echo "ERROR, ACL file not found, please mount the ACL file to /etc/redis/user.acl"
+            if [[ ! -f "/data/user.acl" ]]; then
+                echo "ERROR, ACL file not found, please mount the ACL file to /data/user.acl"
                 echo "If the FalkorDB instances are runnning with ACL, Sentinel should also run with ACL, and the following should be added to the extra config:"
                 echo """
                   sentinel auth-user master 
@@ -89,9 +89,9 @@ acl_setup(){
             fi
            
             echo "Creating new ACL file"
-            cat /etc/redis/user.acl > /etc/redis/sentinel.acl
+            cat /data/user.acl > /etc/redis/user.acl
         {
-            echo aclfile /etc/redis/sentinel.acl
+            echo aclfile /etc/redis/user.acl
             } >> /etc/redis/sentinel.conf
 
     else
