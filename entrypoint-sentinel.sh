@@ -65,6 +65,7 @@ tls_setup() {
             echo tls-ca-cert-file "${REDIS_TLS_CA_KEY}"
             # echo tls-prefer-server-ciphers yes
             echo tls-auth-clients optional
+            echo tls-replication yes
         } >> /etc/redis/sentinel.conf
 
     else
