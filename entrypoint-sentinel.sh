@@ -89,9 +89,9 @@ acl_setup(){
             fi
            
             echo "Creating new ACL file"
-            cat /data/user.acl > /etc/redis/user.acl
+            cat /data/user.acl > /sentinel-data/user.acl
         {
-            echo aclfile /etc/redis/user.acl
+            echo aclfile /sentinel-data/user.acl
             } >> /etc/redis/sentinel.conf
 
     else
