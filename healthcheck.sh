@@ -40,22 +40,21 @@ function is_cluster_enabled() {
   "${CLI[@]}" INFO | grep -q '^cluster_enabled:1'
 }
 
-function cluster_state_ok() {
-  # for liveness allow BUSYLOADING
-  if [[ "$MODE" == "liveness" ]]; then
-    OUT="$("${CLI[@]}" CLUSTER INFO 2>&1)" || true
-    if echo "$OUT" | grep -q '^cluster_state:ok'; then
-      return 0
-    elif echo "$OUT" | grep -q 'BUSYLOADING'; then
-      return 0
-    else
-      return 1
-    fi
+cluster_state_ok() {
+  local out
+  out="$("${CLI[@]}" CLUSTER INFO 2>&1)" || true
+
+  if grep -q '^cluster_state:ok' <<<"$out"; then
+    return 0
+  elif [[ "$MODE" == "liveness" ]]; then
+    # Allow failed or empty state during cluster boot
+    echo "[liveness] cluster_state not ok yet" >&2
+    return 0
   else
-    # readiness: must explicitly be ok
-    "${CLI[@]}" CLUSTER INFO 2>/dev/null | grep -q '^cluster_state:ok'
+    return 1
   fi
 }
+
 
 function check_master_liveness() {
   OUT="$("${CLI[@]}" PING 2>&1)" || true
