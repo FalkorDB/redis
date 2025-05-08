@@ -31,6 +31,22 @@ if [[ "$TLS_MODE" == "true" ]]; then
   CLI+=(--tls --cert "${REDIS_TLS_CERT}" --key "${REDIS_TLS_CERT_KEY}" --cacert "${REDIS_TLS_CA_KEY}")
 fi
 
+#Skip readiness and healthcheck if it is the first time creating the deployment
+if [[ ! -f "/data/.redis-init" ]]; then
+  touch "/data/.redis-init"
+fi
+
+if [[ ! -s "/data/.redis-init" && $(is_cluster_enabled) ]]; then
+   out="$("${CLI[@]}" CLUSTER INFO 2>&1)" || true
+   if grep -q '^cluster_state:ok' <<<"$out"; then
+      echo 1 > /data/.redis-init
+      return 0
+    else
+      echo "[readiness] cluster_state not ok yet" >&2
+      return 0
+   fi
+fi
+
 # Helpers
 function check_sentinel() {
   [[ "$("${CLI[@]}" PING 2>/dev/null)" == "PONG" ]]
