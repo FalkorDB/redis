@@ -36,16 +36,7 @@ if [[ ! -f "/data/.redis-init" ]]; then
   touch "/data/.redis-init"
 fi
 
-if [[ ! -s "/data/.redis-init" && $(is_cluster_enabled) ]]; then
-   out="$("${CLI[@]}" CLUSTER INFO 2>&1)" || true
-   if grep -q '^cluster_state:ok' <<<"$out"; then
-      echo 1 > /data/.redis-init
-      return 0
-    else
-      echo "[readiness] cluster_state not ok yet" >&2
-      return 0
-   fi
-fi
+
 
 # Helpers
 function check_sentinel() {
@@ -59,12 +50,7 @@ function is_cluster_enabled() {
 cluster_state_ok() {
   local out
   out="$("${CLI[@]}" CLUSTER INFO 2>&1)" || true
-
   if grep -q '^cluster_state:ok' <<<"$out"; then
-    return 0
-  elif [[ "$MODE" == "liveness" ]]; then
-    # Allow failed or empty state during cluster boot
-    echo "[liveness] cluster_state not ok yet" >&2
     return 0
   else
     return 1
@@ -127,6 +113,26 @@ function check_node_readiness() {
     check_slave_readiness
   fi
 }
+
+function check_if_cluster_first_time() {
+  local out
+  # Check if the cluster is in the process of being created
+  if [[ ! -s "/data/.redis-init" ]]; then
+    if is_cluster_enabled;then
+    out="$("${CLI[@]}" CLUSTER INFO 2>&1)" || true
+    if grep -q '^cluster_state:ok' <<<"$out"; then
+        echo 1 > /data/.redis-init
+        exit 0
+      else
+        echo "cluster_state not ok yet" >&2
+        exit 0
+    fi
+  fi
+fi
+}
+
+check_if_cluster_first_time
+
 
 # Main dispatch
 if $IS_SENTINEL; then
