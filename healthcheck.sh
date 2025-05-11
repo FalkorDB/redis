@@ -11,9 +11,11 @@ if [[ "$2" == "sentinel" ]]; then
   IS_SENTINEL=true
 fi
 
+echo "[healthcheck] MODE=$MODE, IS_SENTINEL=$IS_SENTINEL" >&2
 
 # Determine host & port
 HOST="$(hostname)"
+echo "[healthcheck] HOST=$HOST" >&2
 
 if $IS_SENTINEL; then
   PORT="${SENTINEL_PORT:-26379}"
@@ -21,8 +23,10 @@ else
   PORT="${NODE_PORT:-6379}"
 fi
 
-# Redis CLI base args
-CLI=(redis-cli -h "$HOST" -p "$PORT")
+echo "[healthcheck] PORT=$PORT" >&2
+
+# Redis CLI base args, wrapped with timeout
+CLI=(timeout -s 15 "${REDIS_TIMEOUT_SECONDS}" redis-cli -h "$HOST" -p "$PORT")
 if [[ -n "$REDIS_PASSWORD" ]]; then
   CLI+=(-a "$REDIS_PASSWORD")
 fi
@@ -31,38 +35,62 @@ if [[ "$TLS_MODE" == "true" ]]; then
   CLI+=(--tls --cert "${REDIS_TLS_CERT}" --key "${REDIS_TLS_CERT_KEY}" --cacert "${REDIS_TLS_CA_KEY}")
 fi
 
-#Skip readiness and healthcheck if it is the first time creating the deployment
+echo "[healthcheck] CLI=${CLI[*]}" >&2
+
+# Skip readiness and healthcheck if first time
 if [[ ! -f "/data/.redis-init" ]]; then
   touch "/data/.redis-init"
+  echo "[healthcheck] Initialized .redis-init flag" >&2
 fi
 
-
+# Helper to run Redis CLI with debug on stderr and clean stdout
+function run_cli() {
+  # debug to stderr
+  echo "[healthcheck] Running: ${CLI[*]} $*" >&2
+  # capture only command output
+  local output
+  if ! output=$("${CLI[@]}" "$@" 2>&1); then
+    local status=$?
+    echo "[healthcheck] Exit status: $status" >&2
+    if [[ $status -eq 124 ]]; then
+      echo "[healthcheck] ERROR: Command timed out after $REDIS_TIMEOUT_SECONDS seconds" >&2
+    fi
+    # print command output even on failure
+    printf "%s\n" "$output"
+    return $status
+  fi
+  local status=0
+  echo "[healthcheck] Exit status: $status" >&2
+  # print only output
+  printf "%s\n" "$output"
+  return 0
+}
 
 # Helpers
 function check_sentinel() {
-  [[ "$("${CLI[@]}" PING 2>/dev/null)" == "PONG" ]]
+  echo "[healthcheck] check_sentinel" >&2
+  [[ "$(run_cli PING)" == "PONG" ]]
 }
 
 function is_cluster_enabled() {
-  "${CLI[@]}" INFO | grep -q '^cluster_enabled:1'
+  echo "[healthcheck] is_cluster_enabled" >&2
+  run_cli INFO | grep -q '^cluster_enabled:1'
 }
 
-cluster_state_ok() {
+function cluster_state_ok() {
+  echo "[healthcheck] cluster_state_ok" >&2
   local out
-  out="$("${CLI[@]}" CLUSTER INFO 2>&1)" || true
-  if grep -q '^cluster_state:ok' <<<"$out"; then
-    return 0
-  else
-    return 1
-  fi
+  out="$(run_cli CLUSTER INFO)" || true
+  echo "[healthcheck] CLUSTER INFO output: $out" >&2
+  grep -q '^cluster_state:ok' <<<"$out"
 }
-
 
 function check_master_liveness() {
-  OUT="$("${CLI[@]}" PING 2>&1)" || true
-  if [[ "$OUT" == "PONG" ]]; then
-    return 0
-  elif echo "$OUT" | grep -q 'BUSYLOADING'; then
+  echo "[healthcheck] check_master_liveness" >&2
+  local out
+  out="$(run_cli PING)" || true
+  echo "[healthcheck] PING output: $out" >&2
+  if [[ "$out" == "PONG" ]] || echo "$out" | grep -q 'BUSYLOADING'; then
     return 0
   else
     return 1
@@ -70,17 +98,21 @@ function check_master_liveness() {
 }
 
 function check_master_readiness() {
-  # PONG and loading:0
-  PING_OK=$("${CLI[@]}" PING 2>/dev/null)
-  INFO_OK=$("${CLI[@]}" INFO | grep -q '^loading:0' && echo yes)
-  [[ "$PING_OK" == "PONG" && "$INFO_OK" == "yes" ]]
+  echo "[healthcheck] check_master_readiness" >&2
+  local pong=$(run_cli PING)
+  local load_ok
+  run_cli INFO | grep -q '^loading:0'
+  load_ok=$?
+  echo "[healthcheck] PING=$pong, loading0? $load_ok" >&2
+  [[ "$pong" == "PONG" && "$load_ok" -eq 0 ]]
 }
 
 function check_slave_liveness() {
-  OUT="$("${CLI[@]}" PING 2>&1)" || true
-  if [[ "$OUT" == "PONG" ]]; then
-    return 0
-  elif echo "$OUT" | grep -Eq 'BUSYLOADING|MASTERDOWN'; then
+  echo "[healthcheck] check_slave_liveness" >&2
+  local out
+  out="$(run_cli PING)" || true
+  echo "[healthcheck] PING output: $out" >&2
+  if [[ "$out" == "PONG" ]] || echo "$out" | grep -Eq 'BUSYLOADING|MASTERDOWN'; then
     return 0
   else
     return 1
@@ -88,17 +120,22 @@ function check_slave_liveness() {
 }
 
 function check_slave_readiness() {
-  PING_OK=$("${CLI[@]}" PING 2>/dev/null)
-  INFO="$("${CLI[@]}" INFO)"
-  grep -q '^loading:0'  <<<"$INFO" &&
-  grep -q '^master_link_status:up' <<<"$INFO" &&
-  grep -q '^master_sync_in_progress:0' <<<"$INFO" &&
-  [[ "$PING_OK" == "PONG" ]]
+  echo "[healthcheck] check_slave_readiness" >&2
+  local pong=$(run_cli PING)
+  local info
+  info=$(run_cli INFO)
+  echo "[healthcheck] INFO output: $info" >&2
+  grep -q '^loading:0' <<<"$info" &&
+  grep -q '^master_link_status:up' <<<"$info" &&
+  grep -q '^master_sync_in_progress:0' <<<"$info" &&
+  [[ "$pong" == "PONG" ]]
 }
 
 function check_node_liveness() {
-  ROLE=$("${CLI[@]}" INFO | grep -oP '^role:\K\w+')
-  if [[ "$ROLE" == "master" ]]; then
+  echo "[healthcheck] check_node_liveness" >&2
+  local role=$(run_cli INFO | grep -oP '^role:\K\w+')
+  echo "[healthcheck] role=$role" >&2
+  if [[ "$role" == "master" ]]; then
     check_master_liveness
   else
     check_slave_liveness
@@ -106,8 +143,10 @@ function check_node_liveness() {
 }
 
 function check_node_readiness() {
-  ROLE=$("${CLI[@]}" INFO | grep -oP '^role:\K\w+')
-  if [[ "$ROLE" == "master" ]]; then
+  echo "[healthcheck] check_node_readiness" >&2
+  local role=$(run_cli INFO | grep -oP '^role:\K\w+')
+  echo "[healthcheck] role=$role" >&2
+  if [[ "$role" == "master" ]]; then
     check_master_readiness
   else
     check_slave_readiness
@@ -115,24 +154,24 @@ function check_node_readiness() {
 }
 
 function check_if_cluster_first_time() {
-  local out
-  # Check if the cluster is in the process of being created
+  echo "[healthcheck] check_if_cluster_first_time" >&2
   if [[ ! -s "/data/.redis-init" ]]; then
-    if is_cluster_enabled;then
-    out="$("${CLI[@]}" CLUSTER INFO 2>&1)" || true
-    if grep -q '^cluster_state:ok' <<<"$out"; then
+    if is_cluster_enabled; then
+      local out
+      out="$(run_cli CLUSTER INFO)" || true
+      echo "[healthcheck] First-time CLUSTER INFO: $out" >&2
+      if grep -q '^cluster_state:ok' <<<"$out"; then
         echo 1 > /data/.redis-init
         exit 0
       else
         echo "cluster_state not ok yet" >&2
         exit 0
+      fi
     fi
   fi
-fi
 }
 
 check_if_cluster_first_time
-
 
 # Main dispatch
 if $IS_SENTINEL; then
@@ -149,5 +188,6 @@ else
   fi
 fi
 
-# If we reach here and the last check returned true, exit 0
+# If successful
+echo "[healthcheck] Completed successfully" >&2
 exit 0
