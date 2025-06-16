@@ -13,6 +13,25 @@ if [[ -n $POD_HOSTNAME ]];then
 else
     POD_HOSTNAME=$(hostname)
 fi
+
+set_maxmemory(){
+# Check for cgroup v1
+if [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+    mem_limit_bytes=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)
+# Check for cgroup v2
+elif [ -f /sys/fs/cgroup/memory.max ]; then
+    mem_limit_bytes=$(cat /sys/fs/cgroup/memory.max)
+else
+    echo "Could not determine memory limit"
+    mem_limit_bytes=0
+fi
+
+# Convert to MiB for readability
+mem_limit_mib=$((mem_limit_bytes / 1024 / 1024))
+echo "${mem_limit_mib}MB" >> /etc/redis/redis.conf
+
+}
+
 apply_permissions() {
     chgrp -R 1000 /etc/redis
     chmod -R g=u /etc/redis
@@ -191,6 +210,7 @@ main_function() {
     if [[ -f "${EXTERNAL_CONFIG_FILE}" ]]; then
         external_config
     fi
+    set_maxmemory
     start_redis
 }
 
