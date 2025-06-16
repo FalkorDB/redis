@@ -28,7 +28,7 @@ fi
 
 # Convert to MiB for readability
 mem_limit_mib=$((mem_limit_bytes / 1024 / 1024))
-echo "${mem_limit_mib}MB" >> /etc/redis/redis.conf
+echo "maxmemory ${mem_limit_mib}MB" >> /etc/redis/redis.conf
 
 }
 
