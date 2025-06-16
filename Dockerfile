@@ -58,6 +58,7 @@ LABEL version=1.0 \
 
 COPY --from=builder /usr/local/bin/redis-server /usr/local/bin/redis-server
 COPY --from=builder /usr/local/bin/redis-cli /usr/local/bin/redis-cli
+COPY --from=module /var/lib/falkordb /var/lib/falkordb
 COPY --from=module /FalkorDB /FalkorDB
 RUN apt-get update && apt-get install -y \
     libgomp1 \
