@@ -14,9 +14,9 @@ else
     POD_HOSTNAME=$(hostname)
 fi
 
-set_maxmemory(){
-# Check for cgroup v1
-if [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+
+get_default_memory_limit() {
+  if [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
     mem_limit_bytes=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)
 # Check for cgroup v2
 elif [ -f /sys/fs/cgroup/memory.max ]; then
@@ -27,9 +27,48 @@ else
 fi
 
 # Convert to MiB for readability
-mem_limit_mib=$((mem_limit_bytes / 1024 / 1024))
-echo "maxmemory ${mem_limit_mib}MB" >> /etc/redis/redis.conf
+mem_limit_mib=$((mem_limit_bytes / 1024 / 1024 - 100))
+echo "${mem_limit_mib}MB"
 
+}
+
+set_maxmemory(){
+# Check for cgroup v1
+declare -A memory_limit_instance_type_map
+  memory_limit_instance_type_map=(
+    ["e2-standard-2"]="6GB"
+    ["e2-standard-4"]="14GB"
+    ["e2-custom-small-1024"]="100MB"
+    ["e2-medium"]="2GB"
+    ["e2-custom-4-8192"]="6GB"
+    ["e2-custom-8-16384"]="13GB"
+    ["e2-custom-16-32768"]="30GB"
+    ["e2-custom-32-65536"]="62GB"
+    ["t2.medium"]="2GB"
+    ["m6i.large"]="6GB"
+    ["m6i.xlarge"]="14GB"
+    ["c6i.xlarge"]="6GB"
+    ["c6i.2xlarge"]="13GB"
+    ["c6i.4xlarge"]="30GB"
+    ["c6i.8xlarge"]="62GB"
+  )
+
+  if [[ -z $INSTANCE_TYPE && -z $MEMORY_LIMIT ]]; then
+    echo "INSTANCE_TYPE is not set"
+    MEMORY_LIMIT=$(get_default_memory_limit)
+  fi
+
+  instance_size_in_map=${memory_limit_instance_type_map[$INSTANCE_TYPE]}
+
+  if [[ -n $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
+    MEMORY_LIMIT=$instance_size_in_map
+  elif [[ -z $instance_size_in_map && -z $MEMORY_LIMIT ]]; then
+    MEMORY_LIMIT=$(get_default_memory_limit)
+    echo "INSTANCE_TYPE is not set. Setting to default memory limit"
+  fi
+    
+  echo "Memory Limit: $MEMORY_LIMIT"
+  echo "maxmemory ${MEMORY_LIMIT}" >> /etc/redis/redis.conf
 }
 
 apply_permissions() {
