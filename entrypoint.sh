@@ -7,6 +7,7 @@ DATA_DIR=${DATA_DIR:-"/data"}
 NODE_CONF_DIR=${NODE_CONF_DIR:-"/node-conf"}
 EXTERNAL_CONFIG_FILE=${EXTERNAL_CONFIG_FILE:-"/etc/redis/external.conf.d/redis-additional.conf"}
 REDIS_MAJOR_VERSION=${REDIS_MAJOR_VERSION:-"v7"}
+INSTANCE_TYPE=${INSTANCE_TYPE:-""}
 
 if [[ -n $POD_HOSTNAME ]];then
     POD_HOSTNAME=$HOSTNAME.$POD_HOSTNAME
@@ -22,12 +23,18 @@ get_default_memory_limit() {
 elif [ -f /sys/fs/cgroup/memory.max ]; then
     mem_limit_bytes=$(cat /sys/fs/cgroup/memory.max)
 else
-    echo "Could not determine memory limit"
-    mem_limit_bytes=0
+    mem_limit_mib=0
 fi
 
-# Convert to MiB for readability
-mem_limit_mib=$((mem_limit_bytes / 1024 / 1024 - 100))
+if [[ "$mem_limit_bytes" == "max" ]]; then
+    mem_limit_mib=0
+else
+    # Convert to MiB for readability
+    mem_limit_mib=$((mem_limit_bytes / 1024 / 1024 - 100))
+    if [[ $mem_limit_mib -lt 0 ]]; then
+        mem_limit_mib=0
+    fi
+fi
 echo "${mem_limit_mib}MB"
 
 }
